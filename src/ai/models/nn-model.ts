@@ -42,24 +42,55 @@ export default class NNModel extends Model {
     this.biases[1] = tf.variable(tf.scalar(Math.random()));
   }
 
-  predict(inputXs: number[]) {
+  predict(inputXs: number[] | tf.Tensor) {
     const x = tensor(inputXs);
-    // 预测的是指
+    // 预测的是值
     const prediction = tf.tidy(() => {
       const hiddenLayer = tf.sigmoid(x.matMul(this.weights[0]).add(this.biases[0]));
       const outputLayer = tf.sigmoid(hiddenLayer.matMul(this.weights[1]).add(this.biases[1]));
       return outputLayer;
     });
+
+    // 如果输入不是 tensor，我们需要手动 dispose 刚才创建的中间 tensor x
+    // 如果是 fit 传进来的，fit 会负责 dispose
+    if (!(inputXs instanceof tf.Tensor)) {
+      x.dispose();
+    }
+
     return prediction;
   }
 
-  train(inputXs: any[], inputYs: any[]): void {
-    // 训练的过程其实就是将带标签的数据交给内置的 optimizer 进行优化
+  train(inputXs: tf.Tensor, inputYs: tf.Tensor, batchSize: number = 32): void {
+    const numSamples = inputXs.shape[0];
+    
+    // 如果样本数少于 batchSize，直接全量训练
+    if (numSamples <= batchSize) {
+      this.optimizer.minimize(() => {
+        const predictedYs = this.predict(inputXs);
+        return this.loss(predictedYs, inputYs);
+      });
+      return;
+    }
+
+    // 随机选择一个 batch 进行训练，而不是全量，这样可以大大提升每一轮迭代的速度
+    // 同时也引入了随机性，有助于跳出局部最优解
+    const indices = Array.from({ length: numSamples }, (_, i) => i);
+    for (let i = indices.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [indices[i], indices[j]] = [indices[j], indices[i]];
+    }
+
+    const batchIndices = indices.slice(0, batchSize);
+    const batchX = tf.gather(inputXs, batchIndices);
+    const batchY = tf.gather(inputYs, batchIndices);
+
     this.optimizer.minimize(() => {
-      const predictedYs = this.predict(inputXs);
-      // 计算损失值，优化器的目标就是最小化该值
-      return this.loss(predictedYs, inputYs);
+      const predictedYs = this.predict(batchX);
+      return this.loss(predictedYs, batchY);
     });
+
+    batchX.dispose();
+    batchY.dispose();
   }
 
   /**

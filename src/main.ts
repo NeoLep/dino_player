@@ -16,7 +16,7 @@ function startGame() {
 }
 
 const autoStart = false
-const autoRestart = false
+const autoRestart = true
 
 let tryCount = 0
 let lastJumpingState = false
@@ -57,14 +57,19 @@ document.querySelector('#importBtn')?.addEventListener('click', () => {
     model.import()
 })
 
+let lastObstacle: any
 const convertStateToVector = () => {
   const obstalce = window._runner.horizon.obstacles?.[0]
+  if (lastObstacle !== obstalce) {
+    lastObstacle = obstalce
+    console.log(lastObstacle)
+  }
   if (!obstalce) return [0, 0, 0]
   let isHighPTE = obstalce.typeConfig.type === 'PTERODACTYL' && obstalce.yPos <= 50
   if (isHighPTE) return [0, 0, 0]
 
   const speed = window._runner.currentSpeed
-  return [obstalce.xPos, obstalce.yPos, speed]
+  return [obstalce.xPos, obstalce.width, speed]
 }
 
 
@@ -76,23 +81,31 @@ const handleRunning = async () => {
     if (!window._runner) return
     if (proxy.isCrashed) {
         review() // 复盘一次
-        proxy.restart()
+        if (autoRestart) {
+          proxy.restart()
+        }
     }
     if (proxy.isPlaying) {
       const v = convertStateToVector()
       const prediction = model.predictSingle(v) as tf.Tensor<tf.Rank>;
       const result = await prediction.data()
+      
       if (result && result[1] > result[0]) {
         proxy.jump()
-        lastJumpingState = true // 记录崩溃前最后的状态
+        lastJumpingState = true 
       } else {
-        lastJumpingState = false // 记录崩溃前最后的状态
+        lastJumpingState = false 
       }
+      
+      // 必须手动 dispose 预测结果 Tensor，否则会造成内存泄漏
+      prediction.dispose();
+      
       requestAnimationFrame(() => handleRunning())
     }
 }
 
 document.getElementById('tryCount')!.innerText = `${tryCount}`
+const MAX_TRAINING_SIZE = 1000;
 const review = () => {
   let input = null;
   let label = null;
@@ -107,7 +120,16 @@ const review = () => {
   training.inputs.push(input);
   training.labels.push(label);
 
+  // 限制训练集大小，避免 O(N^2) 导致的性能下降
+  if (training.inputs.length > MAX_TRAINING_SIZE) {
+    training.inputs.shift();
+    training.labels.shift();
+  }
+
   // 游戏结束了，我们需要将训练数据喂给模型进行训练
-  model.fit(training.inputs, training.labels)
-  console.log('reviewed: ', lastJumpingState, input, label[0], tryCount)
+  // 减少迭代次数，因为数据量大时，100次迭代太慢了
+  // 也可以根据数据量动态调整迭代次数
+  const iterations = Math.max(10, Math.min(100, Math.floor(10000 / training.inputs.length)));
+  model.fit(training.inputs, training.labels, iterations)
+  console.log('reviewed: ', lastJumpingState, input, label[0], tryCount, 'iterations:', iterations)
 }
