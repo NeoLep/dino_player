@@ -2,10 +2,12 @@ import Model from './base';
 
 // 随机模型继承自 Model
 export default class RandomModel extends Model {
-  // weights 和 biases 是 RandomModel 的模型参数
-  weights: any = [];
-  biases: any = [];
+  modelName: string = 'random-model'
 
+  constructor(_c?: any) {
+    super()
+  }
+  
   init() {
     // 初始化就是随机的过程
     this.randomize();
