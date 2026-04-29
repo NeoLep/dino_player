@@ -55,6 +55,11 @@ export class DinoGameProxy {
   duck() {
     this.action(DinoActionCodes.DUCK)
   }
+  releaseDuck() {
+    this.runner.onKeyUp(new KeyboardEvent('keyup', {
+        keyCode: DinoActionCodes.DUCK
+    }))
+  }
   jump() {
     this.action(DinoActionCodes.JUMP)
   }

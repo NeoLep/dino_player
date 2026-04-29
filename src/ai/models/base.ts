@@ -61,12 +61,7 @@ export default class Model {
     return meanSquareError;
   }
 
-  review(inputs: any[], labels: any[], maxTrainingSize = 1000) {
-    // 限制训练集大小，避免 O(N^2) 导致的性能下降
-    if (inputs.length > maxTrainingSize) {
-      inputs.shift();
-      labels.shift();
-    }
+  review(inputs: any[], labels: any[]) {
     const iterations = Math.max(10, Math.min(100, Math.floor(10000 / inputs.length)));
     this.fit(inputs, labels, iterations)
   }

@@ -298,6 +298,14 @@ export default class DistanceMeter {
     this.highScore = ["10", "11", ""].concat(highScoreStr.split(""));
   }
 
+  getScore(distance: number) {
+    distance = this.getActualDistance(distance);
+    const score = (this.defaultString + distance).substr(
+      -this.maxScoreUnits,
+    );
+    return score;
+  }
+
   /**
    * 是否点击了最高分
    * @param e Event object.

@@ -16,7 +16,7 @@ export default class NNModel extends Model {
   inputSize: number
   outputSize: number
 
-  constructor({ inputSize = 3, hiddenLayerSize = inputSize * 2, outputSize = 2, learningRate = 0.1 }: ConsArgType) {
+  constructor({ inputSize = 4, hiddenLayerSize = inputSize * 2, outputSize = 2, learningRate = 0.01 }: ConsArgType) {
     super()
 
     this.hiddenLayerSize = hiddenLayerSize;
