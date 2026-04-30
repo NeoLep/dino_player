@@ -66,7 +66,11 @@ function renderRecords() {
   `).join('')
 }
 
-const forward = () => requestAnimationFrame(() => window._runner && handleRunning())
+let PlayByAI = false
+const forward = () => {
+  if (!PlayByAI) return
+  requestAnimationFrame(() => window._runner && handleRunning())
+}
 document.querySelector('#startBtn')?.addEventListener('click', () => {
     if (proxy.isPlaying) return
     if (!proxy.activated) {
@@ -90,8 +94,19 @@ document.querySelector('#importBtn')?.addEventListener('click', () => {
     model.import()
 })
 
+// PlayByAI 开关控制
+const playByAiSwitch = document.querySelector('#playByAiSwitch') as HTMLInputElement
+const playByAiLabel = document.querySelector('#playByAiLabel') as HTMLElement
+
+playByAiSwitch?.addEventListener('change', (e) => {
+    PlayByAI = (e.target as HTMLInputElement).checked
+    playByAiLabel.innerText = `AI Play: ${PlayByAI ? 'On' : 'Off'}`
+    // 如果关闭AI模式且游戏正在进行，继续运行
+})
+
 let lastObstacle: any
 const CanvasHeight = runner.dimensions.HEIGHT
+const VECTOR_RATIO = 100
 const convertStateToVector = () => {
   const obstalce = window._runner.horizon.obstacles?.[0]
   if (!obstalce) return [0, 0, 0, 0]
@@ -99,14 +114,13 @@ const convertStateToVector = () => {
     lastObstacle = obstalce
   }
   const r = [
-      (obstalce.xPos - window._runner.tRex.xPos) / 100,      // 障碍物离暴龙的距离
-      obstalce.width / 100,  // 障碍物宽度
-      ((CanvasHeight - obstalce.yPos - obstalce.typeConfig.height - 10) / 10) > 0.46 ? 1 : 0,
-      window._runner.currentSpeed / 100                    // 当前游戏全局速度
+      (obstalce.xPos - window._runner.tRex.xPos) / VECTOR_RATIO,      // 障碍物离暴龙的距离
+      obstalce.width / VECTOR_RATIO,  // 障碍物宽度
+      ((CanvasHeight - obstalce.yPos - obstalce.typeConfig.height - 10) / 10) > 2.5 ? 1 : 0,
+      window._runner.currentSpeed / VECTOR_RATIO                    // 当前游戏全局速度
     ];
     return r
 }
-
 
 window.addEventListener('dinoRestart', () => {
     renderTryCount(() => tryCount++)
@@ -116,11 +130,23 @@ window.addEventListener('dinoRestart', () => {
 const reverseLabel = (needJump?: boolean): [number, number] => needJump ? [0, 1] : [1, 0]
 const afterCrashed = () => {
   const MAX_TRAINING_SIZE = 3000;
-  const newLabel = reverseLabel(!lastDinoState.lastJumpingState); // 将最后一次决策反转
-  
-  // 总结失败规律
+
+  if (lastDinoState.lastJumpingState) {
+    const inRising = runner.tRex.jumpVelocity < 0
+    if (lastDinoState.vector![2] !== 1 && inRising) {
+      // 获取最后一次跳跃向量 - 判断是在上升时碰撞，上升时碰撞说明跳跃过晚
+      lastDinoState.vector![0] -= (1/VECTOR_RATIO + lastDinoState.vector![3]) // 跳跃前提 - 不同速度下需要前提的距离不同
+      training.labels.push(reverseLabel(true))
+    } else {
+      training.labels.push(reverseLabel(false))
+    }
+  } else {
+    // 总结失败规律
+    training.labels.push(reverseLabel(true))
+  }
   training.inputs.push(lastDinoState.vector)
-  training.labels.push(newLabel)
+  
+ 
 
   /** 当达到最大值时，去掉前面的数据 */
   if (training.inputs.length > MAX_TRAINING_SIZE) {
@@ -139,7 +165,7 @@ const handleRunning = async () => {
     if (proxy.isCrashed) {
       const [inputs, labels] = afterCrashed()
       model.review(inputs, labels)
-      console.log(`reviewed - [input length] = ${inputs.length}, [labels length] = ${labels.length}`)
+      console.log(`reviewed - [input length] = ${inputs.length}, [labels length] = ${labels.length}`, lastObstacle)
       records.push({
         time: new Date(),
         score: runner.distanceMeter.getScore(runner.distanceRan)

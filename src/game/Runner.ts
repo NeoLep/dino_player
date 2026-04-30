@@ -1032,6 +1032,7 @@ export default class Runner {
    * Pause the game if the tab is not in focus.
    */
   onVisibilityChange(e: Event) {
+    return
     if (
       document.hidden ||
       e.type === "blur" ||

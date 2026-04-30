@@ -1,58 +1,57 @@
 <!DOCTYPE html>
 <html lang="zh" class="offline">
-	<head>
-		<meta charset="utf-8" />
-		<meta content="IE=edge" http-equiv="X-UA-Compatible" />
-		<meta name="renderer" content="webkit" />
-		<meta name="color-scheme" content="light dark" />
-		<meta name="theme-color" content="#fff" />
-		<meta
-			name="viewport"
-			content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"
-		/>
-		<title>Chrome T-Rex Game</title>
-		<link rel="stylesheet" href="game/css/offline.css" />
-	</head>
 
-	<body>
-		<div class="interstitial-wrapper"></div>
-		<div id="offline-resources">
-			<img id="offline-resources-1x" src="game/img/offline-resources-1x.png" />
-			<img id="offline-resources-2x" src="game/img/offline-resources-2x.png" />
-			<template id="audio-resources">
-				<audio
-					id="offline-sound-press"
-					src="game/audio/offline-sound-press.mpeg"
-				></audio>
-				<audio
-					id="offline-sound-hit"
-					src="game/audio/offline-sound-hit.mpeg"
-				></audio>
-				<audio
-					id="offline-sound-reached"
-					src="game/audio/offline-sound-reached.mpeg"
-				></audio>
-			</template>
+<head>
+	<meta charset="utf-8" />
+	<meta content="IE=edge" http-equiv="X-UA-Compatible" />
+	<meta name="renderer" content="webkit" />
+	<meta name="color-scheme" content="light dark" />
+	<meta name="theme-color" content="#fff" />
+	<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+	<title>Chrome T-Rex Game</title>
+	<link rel="stylesheet" href="game/css/offline.css" />
+</head>
+
+<body>
+	<div class="interstitial-wrapper"></div>
+	<div id="offline-resources">
+		<img id="offline-resources-1x" src="game/img/offline-resources-1x.png" />
+		<img id="offline-resources-2x" src="game/img/offline-resources-2x.png" />
+		<template id="audio-resources">
+			<audio id="offline-sound-press" src="game/audio/offline-sound-press.mpeg"></audio>
+			<audio id="offline-sound-hit" src="game/audio/offline-sound-hit.mpeg"></audio>
+			<audio id="offline-sound-reached" src="game/audio/offline-sound-reached.mpeg"></audio>
+		</template>
+	</div>
+	<div class="ope" style="display: flex;">
+		<div id="gameTitle">
+			<span>TryCount: </span>
+			<span id="tryCount"></span>
 		</div>
-		<div class="ope" style="display: flex;">
-			<div id="gameTitle">
-				<span>TryCount: </span>
-				<span id="tryCount"></span>
-			</div>
-			<div class="btn-group">
-				<button id="startBtn">Start Game</button>
-				<button id="exportBtn">Export Model</button>
-				<button id="importBtn">Import Model</button>
-			</div>
+		<div class="btn-group">
+			<button id="startBtn">Start Game</button>
+			<button id="exportBtn">Export Model</button>
+			<button id="importBtn">Import Model</button>
 		</div>
-		<div style="width: 800px; margin: 0 auto;">
+	</div>
+	<div style="width: 800px; margin: 0 auto; display: flex; align-items: center; justify-content: space-between;">
+		<span>
 			<span>Model:</span>
 			<span id="modelName"></span>
+		</span>
+		<div style="display: flex; align-items: center; justify-content: center;">
+			<label class="toggle-switch" style="margin-right: 10px;">
+				<input type="checkbox" id="playByAiSwitch">
+				<span class="toggle-slider"></span>
+			</label>
+			<span id="playByAiLabel">AI Play: Off</span>
 		</div>
-		<div class="records-panel">
-			<div class="records-header">Recent Records</div>
-			<div id="recordsList" class="records-list"></div>
-		</div>
-		<script type="module" src="/src/main.ts"></script>
-	</body>
+	</div>
+	<div class="records-panel">
+		<div class="records-header">Recent Records</div>
+		<div id="recordsList" class="records-list"></div>
+	</div>
+	<script type="module" src="/src/main.ts"></script>
+</body>
+
 </html>
