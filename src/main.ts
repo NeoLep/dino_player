@@ -66,7 +66,7 @@ function renderRecords() {
   `).join('')
 }
 
-let PlayByAI = false
+let PlayByAI = true
 const forward = () => {
   if (!PlayByAI) return
   requestAnimationFrame(() => window._runner && handleRunning())
@@ -86,16 +86,35 @@ if (autoStart) {
     (document.querySelector('#startBtn') as any)?.click()
 }
 
+// Toast 提示函数
+function showToast(message: string, type: 'success' | 'error' = 'success') {
+    const toast = document.getElementById('toast') as HTMLElement
+    toast.textContent = message
+    toast.className = `toast ${type} show`
+    
+    setTimeout(() => {
+        toast.classList.remove('show')
+    }, 2000)
+}
+
 document.querySelector('#exportBtn')?.addEventListener('click', () => {
     model.export()
+    showToast('模型导出成功！')
 })
 
 document.querySelector('#importBtn')?.addEventListener('click', () => {
-    model.import()
+    const success = model.import()
+    if (success) {
+        showToast('模型导入成功！')
+    } else {
+        showToast('未找到模型文件', 'error')
+    }
 })
 
 // PlayByAI 开关控制
 const playByAiSwitch = document.querySelector('#playByAiSwitch') as HTMLInputElement
+playByAiSwitch.checked = PlayByAI
+
 const playByAiLabel = document.querySelector('#playByAiLabel') as HTMLElement
 
 playByAiSwitch?.addEventListener('change', (e) => {
@@ -135,7 +154,7 @@ const afterCrashed = () => {
     const inRising = runner.tRex.jumpVelocity < 0
     if (lastDinoState.vector![2] !== 1 && inRising) {
       // 获取最后一次跳跃向量 - 判断是在上升时碰撞，上升时碰撞说明跳跃过晚
-      lastDinoState.vector![0] -= (1/VECTOR_RATIO + lastDinoState.vector![3]) // 跳跃前提 - 不同速度下需要前提的距离不同
+      lastDinoState.vector![0] -= (10/VECTOR_RATIO + lastDinoState.vector![3]) // 跳跃前提 - 不同速度下需要前提的距离不同
       training.labels.push(reverseLabel(true))
     } else {
       training.labels.push(reverseLabel(false))

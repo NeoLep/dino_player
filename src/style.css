@@ -134,6 +134,36 @@ body {
   transition: color 0.3s ease;
 }
 
+.toast {
+  position: fixed;
+  top: 20px;
+  right: 20px;
+  padding: 14px 24px;
+  border-radius: 12px;
+  font-size: 14px;
+  font-weight: 500;
+  opacity: 0;
+  transform: translateX(120%);
+  transition: all 0.35s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+  z-index: 1000;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
+}
+
+.toast.show {
+  opacity: 1;
+  transform: translateX(0);
+}
+
+.toast.success {
+  background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+  color: white;
+}
+
+.toast.error {
+  background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+  color: white;
+}
+
 .records-panel {
   width: 800px;
   margin: 24px auto 40px;
@@ -246,6 +276,18 @@ body {
     #playByAiLabel {
       color: #aebcd0;
     }
+  }
+
+  .toast {
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35);
+  }
+
+  .toast.success {
+    background: linear-gradient(135deg, #34d399 0%, #10b981 100%);
+  }
+
+  .toast.error {
+    background: linear-gradient(135deg, #f87171 0%, #ef4444 100%);
   }
 
   .records-panel {
