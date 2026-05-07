@@ -4,6 +4,13 @@ import { DinoGameProxy, DinoActionCodes } from "./proxy"
 import { NNModel, RandomModel } from './ai/models'
 import type * as tf from '@tensorflow/tfjs'
 
+// 动作类型：0=不跳, 1=小跳, 2=大跳
+enum ActionType {
+  Stay = 0,
+  Hop = 1,
+  Jump = 2,
+}
+
 function startGame() {
     const runner = window._runner
     const proxy = new DinoGameProxy(runner)
@@ -22,7 +29,7 @@ const autoRestart = true
 let tryCount = 0
 const lastDinoState = {
   vector: null as null | ReturnType<typeof convertStateToVector>,
-  lastJumpingState: false,
+  lastJumpingState: ActionType.Stay,
 }
 let training = {
     inputs: [] as any[],
@@ -66,7 +73,7 @@ function renderRecords() {
   `).join('')
 }
 
-let PlayByAI = true
+let PlayByAI = false
 const forward = () => {
   if (!PlayByAI) return
   requestAnimationFrame(() => window._runner && handleRunning())
@@ -135,8 +142,8 @@ const convertStateToVector = () => {
   const r = [
       (obstalce.xPos - window._runner.tRex.xPos) / VECTOR_RATIO,      // 障碍物离暴龙的距离
       obstalce.width / VECTOR_RATIO,  // 障碍物宽度
-      ((CanvasHeight - obstalce.yPos - obstalce.typeConfig.height - 10) / 10) > 2.5 ? 1 : 0,
-      window._runner.currentSpeed / VECTOR_RATIO                    // 当前游戏全局速度
+      ((CanvasHeight - obstalce.yPos - obstalce.typeConfig.height - 10) / 10) > 2.5 ? 1 : 0, // 障碍物高度
+      window._runner.currentSpeed / VECTOR_RATIO,                    // 当前游戏全局速度
     ];
     return r
 }
@@ -146,22 +153,37 @@ window.addEventListener('dinoRestart', () => {
     forward()
 })
 
-const reverseLabel = (needJump?: boolean): [number, number] => needJump ? [0, 1] : [1, 0]
+const adjustAction = (action: ActionType): [number, number, number] => {
+   switch (action) {
+    case ActionType.Stay: return [1, 0, 0] // 不跳
+    case ActionType.Hop: return [0, 1, 0] // 小跳
+    case ActionType.Jump: return [0, 0, 1] // 大跳
+    default: return [1, 0, 0]
+  }
+}
+
 const afterCrashed = () => {
   const MAX_TRAINING_SIZE = 3000;
 
-  if (lastDinoState.lastJumpingState) {
+  if (lastDinoState.lastJumpingState !== ActionType.Stay) {
     const inRising = runner.tRex.jumpVelocity < 0
+    console.log('越过障碍物? ', lastObstacle !== runner.horizon.obstacles?.[0])
+
     if (lastDinoState.vector![2] !== 1 && inRising) {
       // 获取最后一次跳跃向量 - 判断是在上升时碰撞，上升时碰撞说明跳跃过晚
       lastDinoState.vector![0] -= (10/VECTOR_RATIO + lastDinoState.vector![3]) // 跳跃前提 - 不同速度下需要前提的距离不同
-      training.labels.push(reverseLabel(true))
+      training.labels.push(adjustAction(ActionType.Jump))
     } else {
-      training.labels.push(reverseLabel(false))
+      if (lastObstacle !== runner.horizon.obstacles?.[0] && lastDinoState.lastJumpingState === ActionType.Jump) { // 在下降中撞到了另一个障碍物
+        training.labels.push(adjustAction(ActionType.Hop))
+      } else {
+        // 下降中
+        training.labels.push(adjustAction(ActionType.Stay))
+      }
     }
   } else {
     // 总结失败规律
-    training.labels.push(reverseLabel(true))
+    training.labels.push(adjustAction(ActionType.Hop))
   }
   training.inputs.push(lastDinoState.vector)
   
@@ -199,15 +221,19 @@ const handleRunning = async () => {
       if (!proxy.inJump) {
         const v = convertStateToVector()
         lastDinoState.vector = v
-        if (v[2] === 3.5 && !proxy.inDuck) {
-          proxy.duck()
+        const prediction = model.predictSingle(v) as tf.Tensor<tf.Rank>;
+        const [isStay, isHop, isJump] = await prediction.data()
+        const maxAct = Math.max(isStay, isHop, isJump)
+        if (isJump === maxAct) {
+          proxy.jump()
+          lastDinoState.lastJumpingState = ActionType.Jump
+        } else if (isHop === maxAct) {
+          proxy.hop()
+          lastDinoState.lastJumpingState = ActionType.Hop
         } else {
-          const prediction = model.predictSingle(v) as tf.Tensor<tf.Rank>;
-          const [isStay, isJump] = await prediction.data()
-          lastDinoState.lastJumpingState = isJump > isStay
-          ;(lastDinoState.lastJumpingState && proxy.inDuck && proxy.releaseDuck())
-          lastDinoState.lastJumpingState && proxy.jump()
+          lastDinoState.lastJumpingState = ActionType.Stay
         }
+        ;(lastDinoState.lastJumpingState !== ActionType.Stay && proxy.inDuck && proxy.releaseDuck())
       }
       requestAnimationFrame(() => handleRunning())
     }

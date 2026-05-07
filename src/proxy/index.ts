@@ -1,6 +1,7 @@
 import Runner from "../game/Runner"
 
 export enum DinoActionCodes {
+  HOP = -38,
   JUMP = 38,
   DUCK = 40,
   RESTART = 13,
@@ -26,6 +27,10 @@ export class DinoGameProxy {
   get inJump() {
     return this.runner.tRex.jumping
   }
+  get reachedMinHeight() {
+    if (!this.runner.tRex.jumping) return
+    return this.runner.tRex.reachedMinHeight
+  }
   get state() {
     return {
       status: this.runner.tRex.status,
@@ -42,6 +47,23 @@ export class DinoGameProxy {
           keyCode: DinoActionCodes.JUMP
         }))
         break
+      case DinoActionCodes.HOP: {
+        if (this.inJump) break
+        const loopCheck = () => {
+          requestAnimationFrame(() => {
+            if (this.reachedMinHeight) {
+              this.runner.onKeyUp(new KeyboardEvent('keyup', {
+                keyCode: DinoActionCodes.JUMP
+              }))
+            } else {
+              loopCheck()
+            }
+          })
+        }
+        this.action(DinoActionCodes.JUMP)
+        loopCheck()
+        break
+      }
       case DinoActionCodes.DUCK:
         this.runner.onKeyDown(new KeyboardEvent('keydown', {
           keyCode: DinoActionCodes.DUCK
@@ -59,6 +81,9 @@ export class DinoGameProxy {
     this.runner.onKeyUp(new KeyboardEvent('keyup', {
         keyCode: DinoActionCodes.DUCK
     }))
+  }
+  hop() {
+    this.action(DinoActionCodes.HOP)
   }
   jump() {
     this.action(DinoActionCodes.JUMP)
